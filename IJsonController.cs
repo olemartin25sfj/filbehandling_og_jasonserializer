@@ -1,8 +1,7 @@
 public interface IJsonController
 {
-    void WriteJsonTofile(string path, Person person);
-    Person ReadJsonFromFile(string path);
-    void EditJsonFile(string path, Person updatedPerson);
-    void DeleteJsonFile(string path);
-
+    void WriteJsonToFile(string path, Person person);
+    List<Person> ReadJsonFromFile(string path);
+    void EditJsonFile(string path, string id, string newName, int newAge);
+    void DeleteJsonFile(string path, string id);
 }

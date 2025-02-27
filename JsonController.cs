@@ -1,13 +1,20 @@
+using System;
 using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 using System.Text.Json;
 
 public class JsonController : IJsonController
 {
-    public void WriteJsonTofile(string path, Person person)
+    public void WriteJsonToFile(string path, Person person)
     {
         try
         {
-            string jsonData = JsonSerializer.Serialize(person);
+            List<Person> people = ReadJsonFromFile(path);
+            person.Id = (people.Count + 1).ToString();
+            people.Add(person);
+
+            string jsonData = JsonSerializer.Serialize(people, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(path, jsonData);
             Console.WriteLine($"JSON-data skrevet til fil: {path}");
         }
@@ -17,41 +24,43 @@ public class JsonController : IJsonController
         }
     }
 
-    public Person ReadJsonFromFile(string path)
+    public List<Person> ReadJsonFromFile(string path)
     {
         try
         {
             if (File.Exists(path))
             {
                 string jsonData = File.ReadAllText(path);
-                return JsonSerializer.Deserialize<Person>(jsonData);
+                return JsonSerializer.Deserialize<List<Person>>(jsonData) ?? new List<Person>();
             }
-            else
-            {
-                Console.WriteLine("Filen finnes ikke.");
-                return null;
-            }
+            return new List<Person>();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Feil ved lesing av JSON fra til: {ex.Message}");
-            return null;
+            Console.WriteLine($"Feil ved lesing av JSON-fil: {ex.Message}");
+            return new List<Person>();
         }
     }
 
-    public void EditJsonFile(string path, Person updatedPerson)
+    public void EditJsonFile(string path, string id, string newName, int newAge)
     {
         try
         {
-            if (File.Exists(path))
+            List<Person> people = ReadJsonFromFile(path);
+            var person = people.FirstOrDefault(p => p.Id == id);
+
+            if (person != null)
             {
-                string jsonData = JsonSerializer.Serialize(updatedPerson);
+                person.Name = newName;
+                person.Age = newAge;
+
+                string jsonData = JsonSerializer.Serialize(people, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(path, jsonData);
-                Console.WriteLine($"Filen {path} har blitt oppdatert.");
+                Console.WriteLine($"Person med ID {id} oppdatert.");
             }
             else
             {
-                Console.WriteLine("Filen finnes ikke og kan derfor ikke oppdateres");
+                Console.WriteLine("Person ikke funnet.");
             }
         }
         catch (Exception ex)
@@ -60,20 +69,42 @@ public class JsonController : IJsonController
         }
     }
 
-    public void DeleteJsonFile(string path)
+    public void DeleteJsonFile(string path, string id)
     {
-
         try
         {
-            if (File.Exists(path))
+            if (id == "ALL")
             {
-                File.Delete(path);
-                Console.WriteLine($"Filen {path} er slettet.");
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                    Console.WriteLine("Hele JSON-filen er slettet.");
+                }
+                else
+                {
+                    Console.WriteLine("Filen finnes ikke.");
+                }
+            }
+            else
+            {
+                List<Person> people = ReadJsonFromFile(path);
+                int countBefore = people.Count;
+                people = people.Where(p => p.Id != id).ToList();
+
+                if (countBefore == people.Count)
+                {
+                    Console.WriteLine("Ingen person med den ID-en ble funnet.");
+                    return;
+                }
+
+                string jsonData = JsonSerializer.Serialize(people, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(path, jsonData);
+                Console.WriteLine($"Person med ID {id} slettet.");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Feil ved sletting av fil: {ex.Message}");
+            Console.WriteLine($"Feil ved sletting: {ex.Message}");
         }
     }
 }
